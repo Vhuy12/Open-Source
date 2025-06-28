@@ -56,10 +56,10 @@ local function W(U)
                                     Args = K
                                 }
 
-                                print("auto suck gayball should work now woah")
+                                print("Welcome to Vampire hub")
                                 game.StarterGui:SetCore("SendNotification", {
-                                    Title = "gayball";
-                                    Text = "auto suck gayball should work now woah";
+                                    Title = "Vampire test version";
+                                    Text = "It work now";
                                     Duration = 5
                                 })
                             end
