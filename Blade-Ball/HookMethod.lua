@@ -710,61 +710,105 @@ local p = D.Main:AddToggle("AutoParry", {
     Title = "Auto parry";
     Default = true
 })
-getgenv().Paws = {
-        ["AutoParry"] = true,
-        ["PingBased"] = true,
-        ["PingBasedOffset"] = 0,
-        ["DistanceToParry"] = 0.5,
-        ["BallSpeedCheck"] = true,
-}
 
 local Players = game:GetService("Players")
-local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local ReplicatedPaw = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Stats = game:GetService("Stats")
 
-local Paws = ReplicatedPaw:WaitForChild("Remotes", 9e9)
-local PawsBalls = workspace:WaitForChild("Balls", 9e9)
-local PawsTable = getgenv().Paws
+local LocalPlayer = Players.LocalPlayer
+local BallsFolder = Workspace:WaitForChild("Balls", 10)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+local ParryButtonPress = Remotes:WaitForChild("ParryButtonPress", 10)
+local AbilityButtonPress = Remotes:FindFirstChild("AbilityButtonPress")
+local UseRage = false
 
-local function IsTheTarget()
-        return Player.Character:FindFirstChild("Highlight")
+local AutoParry = true
+local ParryRange = 13
+local MinBallSpeed = 5
+local PingOffset = 0.05
+local OnlyParryTarget = true
+
+local function getPing()
+    local ok, ping = pcall(function()
+        return Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000
+    end)
+    return ok and math.clamp(ping, 0.05, 0.5) or 0.1
 end
 
-local function FindBall()
-    local RealBall
-    for i, v in pairs(PawsBalls:GetChildren()) do
-        if v:GetAttribute("realBall") == true then
-            RealBall = v
+local function getChar()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+
+local function isValidBall(ball)
+    return ball and ball:IsA("BasePart") and ball:GetAttribute("realBall")
+end
+
+local function isBallTargetingYou(ball, char)
+    if not (ball and char and char.PrimaryPart) then return false end
+    local myPos = char.PrimaryPart.Position
+    local ballPos = ball.Position
+    local ballVel = ball.AssemblyLinearVelocity
+    local dirToChar = (myPos - ballPos).Unit
+    local ballDir = ballVel.Unit
+    local dot = dirToChar:Dot(ballDir)
+    return dot > 0.85
+end
+
+local function doParry()
+    ParryButtonPress:Fire()
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
+
+local function doRageParry(char)
+    if not AbilityButtonPress then return doParry() end
+    local abilities = char:FindFirstChild("Abilities")
+    if abilities and abilities:FindFirstChild("Raging Deflection") and abilities["Raging Deflection"].Enabled and UseRage then
+        AbilityButtonPress:Fire()
+        task.wait(0)
+    end
+    doParry()
+end
+
+local function getClosestDangerBall(char)
+    local minDist, dangerBall = math.huge, nil
+    for _, ball in ipairs(BallsFolder:GetChildren()) do
+        if isValidBall(ball) then
+            local dist = (char.PrimaryPart.Position - ball.Position).Magnitude
+            local speed = ball.AssemblyLinearVelocity.Magnitude
+            if dist < ParryRange and speed > MinBallSpeed then
+                if not OnlyParryTarget or isBallTargetingYou(ball, char) then
+                    if dist < minDist then
+                        minDist = dist
+                        dangerBall = ball
+                    end
+                end
+            end
         end
     end
-    return RealBall
+    return dangerBall
 end
 
-game:GetService("RunService").PreRender:connect(function()
-        if not FindBall() then 
-                return
+local connection
+local function startAutoParry()
+    if connection then connection:Disconnect() end
+    connection = RunService.Heartbeat:Connect(function()
+        if not AutoParry then return end
+        local char = getChar()
+        if not (char and char.PrimaryPart and char:FindFirstChild("Highlight")) then return end
+        local ball = getClosestDangerBall(char)
+        if ball then
+            local delay = getPing() + PingOffset
+            task.wait(delay)
+            doRageParry(char)
         end
-        local Ball = FindBall()
-        
-        local BallPosition = Ball.Position
-        
-        local BallVelocity = Ball.AssemblyLinearVelocity.Magnitude
-        
-        local Distance = Player:DistanceFromCharacter(BallPosition)
-        
-        local Ping = BallVelocity * (game.Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000)
-        
-        if PawsTable.PingBased then
-        Distance -= Ping + PawsTable.PingBasedOffset
-        end
-        
-        if PawsTable.BallSpeedCheck and BallVelocity == 0 then return
-        end
-        
-        if (Distance / BallVelocity) <= PawsTable.DistanceToParry and IsTheTarget() and PawsTable.AutoParry then
-               Paws:WaitForChild("ParryButtonPress"):Fire()
-           end
-end)
+    end)
+end
+
+if AutoParry then startAutoParry() end
 local F = D.Main:AddToggle("AutoSpam", {
     Title = "Auto Spam",
     Default = true
