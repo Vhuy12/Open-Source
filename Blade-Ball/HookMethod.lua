@@ -710,69 +710,60 @@ local p = D.Main:AddToggle("AutoParry", {
     Title = "Auto parry";
     Default = true
 })
-p:OnChanged(function(U)
-    if U then
-        (V)["Auto Parry"] = L.PreSimulation:Connect(function()
-            local U = d.Get_Ball()
-            local L = d.Get_Balls()
-            if not L or # L == 0 then
-                return
-            end
-            for L, R in pairs(L) do
-                if not R then
-                    return
-                end
-                local P = R:FindFirstChild("zoomies")
-                if not P then
-                    return
-                end;
-                (R:GetAttributeChangedSignal("target")):Once(function()
-                    Parried = false
-                end)
-                if Parried then
-                    return
-                end
-                local K = R:GetAttribute("target")
-                local n = U and U:GetAttribute("target")
-                local E = P.VectorVelocity
-                local Y = O.Character
-                if not Y or not Y.PrimaryPart then
-                    return
-                end
-                local T = (Y.PrimaryPart.Position - R.Position).Magnitude
-                local m = E.Magnitude
-                local t = ((game:GetService("Stats")).Network.ServerStatsItem)["Data Ping"]:GetValue() / 10
-                local x = m / 3.25 + t
-                local J = d.Is_Curved()
-                if K == tostring(O) and u then
-                    local U = tick() - q
-                    if U > .6 then
-                        q = tick()
-                        u = false
-                    end
-                    return
-                end
-                if n == tostring(O) and J then
-                    return
-                end
-                if K == tostring(O) and T <= x then
-                    d.Parry()
-                    Parried = true
-                end
-                local G = tick()
-                while tick() - G < 1 do
-                    if not Parried then
-                        break
-                    end
-                    task.wait()
-                end
-                Parried = false
-            end
-        end)
-    elseif (V)["Auto Parry"] then
-        (V)["Auto Parry"]:Disconnect();
-        (V)["Auto Parry"] = nil
+getgenv().Paws = {
+        ["AutoParry"] = true,
+        ["PingBased"] = true,
+        ["PingBasedOffset"] = 0,
+        ["DistanceToParry"] = 0.5,
+        ["BallSpeedCheck"] = true,
+}
+
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local ReplicatedPaw = game:GetService("ReplicatedStorage")
+
+local Paws = ReplicatedPaw:WaitForChild("Remotes", 9e9)
+local PawsBalls = workspace:WaitForChild("Balls", 9e9)
+local PawsTable = getgenv().Paws
+
+local function IsTheTarget()
+        return Player.Character:FindFirstChild("Highlight")
+end
+
+local function FindBall()
+    local RealBall
+    for i, v in pairs(PawsBalls:GetChildren()) do
+        if v:GetAttribute("realBall") == true then
+            RealBall = v
+        end
     end
+    return RealBall
+end
+
+game:GetService("RunService").PreRender:connect(function()
+        if not FindBall() then 
+                return
+        end
+        local Ball = FindBall()
+        
+        local BallPosition = Ball.Position
+        
+        local BallVelocity = Ball.AssemblyLinearVelocity.Magnitude
+        
+        local Distance = Player:DistanceFromCharacter(BallPosition)
+        
+        local Ping = BallVelocity * (game.Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000)
+        
+        if PawsTable.PingBased then
+        Distance -= Ping + PawsTable.PingBasedOffset
+        end
+        
+        if PawsTable.BallSpeedCheck and BallVelocity == 0 then return
+        end
+        
+        if (Distance / BallVelocity) <= PawsTable.DistanceToParry and IsTheTarget() and PawsTable.AutoParry then
+               Paws:WaitForChild("ParryButtonPress"):Fire()
+           end
 end)
 local F = D.Main:AddToggle("AutoSpam", {
     Title = "Auto Spam",
