@@ -710,162 +710,67 @@ local p = D.Main:AddToggle("AutoParry", {
     Title = "Auto parry";
     Default = true
 })
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local Stats = game:GetService("Stats")
-
-local LocalPlayer = Players.LocalPlayer
-local BallsFolder = Workspace:WaitForChild("Balls", 10)
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
-local ParryButtonPress = Remotes:WaitForChild("ParryButtonPress", 10)
-local AbilityButtonPress = Remotes:FindFirstChild("AbilityButtonPress")
-local UseRage = false
-
-local AutoParry = true
-local ParryRange = 13
-local MinBallSpeed = 5
-local PingOffset = 0.05
-local OnlyParryTarget = true
-
-local function getPing()
-    local ok, ping = pcall(function()
-        return Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000
-    end)
-    return ok and math.clamp(ping, 0.05, 0.5) or 0.1
-end
-
-local function getChar()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-end
-
-local function isValidBall(ball)
-    return ball and ball:IsA("BasePart") and ball:GetAttribute("realBall")
-end
-
-local function isBallTargetingYou(ball, char)
-    if not (ball and char and char.PrimaryPart) then return false end
-    local myPos = char.PrimaryPart.Position
-    local ballPos = ball.Position
-    local ballVel = ball.AssemblyLinearVelocity
-    local dirToChar = (myPos - ballPos).Unit
-    local ballDir = ballVel.Unit
-    local dot = dirToChar:Dot(ballDir)
-    return dot > 0.85
-end
-
-local function doParry()
-    ParryButtonPress:Fire()
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-end
-
-local function doRageParry(char)
-    if not AbilityButtonPress then return doParry() end
-    local abilities = char:FindFirstChild("Abilities")
-    if abilities and abilities:FindFirstChild("Raging Deflection") and abilities["Raging Deflection"].Enabled and UseRage then
-        AbilityButtonPress:Fire()
-        task.wait(0)
-    end
-    doParry()
-end
-
-local function getClosestDangerBall(char)
-    local minDist, dangerBall = math.huge, nil
-    for _, ball in ipairs(BallsFolder:GetChildren()) do
-        if isValidBall(ball) then
-            local dist = (char.PrimaryPart.Position - ball.Position).Magnitude
-            local speed = ball.AssemblyLinearVelocity.Magnitude
-            if dist < ParryRange and speed > MinBallSpeed then
-                if not OnlyParryTarget or isBallTargetingYou(ball, char) then
-                    if dist < minDist then
-                        minDist = dist
-                        dangerBall = ball
-                    end
-                end
-            end
-        end
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local BallsFolder = Workspace:WaitForChild("Balls", 9e9)
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
-local AbilityButtonPress = Remotes:WaitForChild("AbilityButtonPress")
-local ParryButtonPress = Remotes:WaitForChild("ParryButtonPress")
-
-local mt = getrawmetatable(game)
-setreadonly(mt, false)
-
-local oldNamecall = mt.__namecall
-mt.__namecall = newcclosure(function(self, ...)
-    local args = {...}
-    if getnamecallmethod() == "FireServer" and tostring(self):lower():find("parry") and args[1] == "Curve" then
-        return
-    end
-    return oldNamecall(self, ...)
-end)
-
 p:OnChanged(function(U)
     if U then
         (V)["Auto Parry"] = L.PreSimulation:Connect(function()
             local U = d.Get_Ball()
             local L = d.Get_Balls()
-            if not L or #L == 0 then return end
-
+            if not L or # L == 0 then
+                return
+            end
             for L, R in pairs(L) do
-                if not R then return end
+                if not R then
+                    return
+                end
                 local P = R:FindFirstChild("zoomies")
-                if not P then return end
-
+                if not P then
+                    return
+                end;
                 (R:GetAttributeChangedSignal("target")):Once(function()
                     Parried = false
                 end)
-
-                if Parried then return end
-
+                if Parried then
+                    return
+                end
                 local K = R:GetAttribute("target")
                 local n = U and U:GetAttribute("target")
                 local E = P.VectorVelocity
                 local Y = O.Character
-                if not Y or not Y.PrimaryPart then return end
-
+                if not Y or not Y.PrimaryPart then
+                    return
+                end
                 local T = (Y.PrimaryPart.Position - R.Position).Magnitude
                 local m = E.Magnitude
-                local t = (game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) / 10
+                local t = ((game:GetService("Stats")).Network.ServerStatsItem)["Data Ping"]:GetValue() / 10
                 local x = m / 3.25 + t
                 local J = d.Is_Curved()
-
                 if K == tostring(O) and u then
                     local U = tick() - q
-                    if U > 0.6 then
+                    if U > .6 then
                         q = tick()
                         u = false
                     end
                     return
                 end
-
                 if n == tostring(O) and J then
                     return
                 end
-
                 if K == tostring(O) and T <= x then
                     d.Parry()
                     Parried = true
                 end
-
                 local G = tick()
                 while tick() - G < 1 do
-                    if not Parried then break end
+                    if not Parried then
+                        break
+                    end
                     task.wait()
                 end
-
                 Parried = false
             end
         end)
     elseif (V)["Auto Parry"] then
-        (V)["Auto Parry"]:Disconnect()
+        (V)["Auto Parry"]:Disconnect();
         (V)["Auto Parry"] = nil
     end
 end)
