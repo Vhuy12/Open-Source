@@ -1,5 +1,3 @@
-local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/Vhuy12/VAMPIRE-HUB/refs/heads/main/Evil.lua"))()
-
 repeat
     task.wait()
 until game:IsLoaded()
@@ -668,3 +666,202 @@ function ManualSpam()
     end)
 end
 ManualSpam()
+local Z = (loadstring(game:HttpGet("https://raw.githubusercontent.com/CodeE4X-dev/Library/refs/heads/main/FluentRemake.lua")))()
+local k = (loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua")))()
+local C = (loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua")))()
+local i = Z:CreateWindow({
+    Title = "Vampire test version",
+    SubTitle = "by Kurayami";
+    TabWidth = 160;
+    Size = UDim2.fromOffset(500, 300),
+    Acrylic = false,
+    Theme = "Aqua";
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+local D = {
+    Home = i:AddTab({
+        Title = "Home",
+        Icon = "home"
+    });
+    Main = i:AddTab({
+        Title = "Main",
+        Icon = "swords"
+    })
+}
+i:SelectTab(1)
+local B = D.Home:AddSection("Credits")
+D.Home:AddParagraph({
+    Title = "Join our discord",
+    Content = "Join to follow the update"
+})
+D.Home:AddButton({
+    Title = "Our Discord";
+    Description = "Click this button to copy link discord",
+    Callback = function()
+        setclipboard("https://discord.gg/NmxEYuQU")
+        Z:Notify({
+            Title = "Thank you";
+            Content = "Link has been copied to clipboard.";
+            Duration = 3
+        })
+    end
+})
+local p = D.Main:AddToggle("AutoParry", {
+    Title = "Auto parry";
+    Default = true
+})
+p:OnChanged(function(U)
+    if U then
+        (V)["Auto Parry"] = L.PreSimulation:Connect(function()
+            local U = d.Get_Ball()
+            local L = d.Get_Balls()
+            if not L or # L == 0 then
+                return
+            end
+            for L, R in pairs(L) do
+                if not R then
+                    return
+                end
+                local P = R:FindFirstChild("zoomies")
+                if not P then
+                    return
+                end;
+                (R:GetAttributeChangedSignal("target")):Once(function()
+                    Parried = false
+                end)
+                if Parried then
+                    return
+                end
+                local K = R:GetAttribute("target")
+                local n = U and U:GetAttribute("target")
+                local E = P.VectorVelocity
+                local Y = O.Character
+                if not Y or not Y.PrimaryPart then
+                    return
+                end
+                local T = (Y.PrimaryPart.Position - R.Position).Magnitude
+                local m = E.Magnitude
+                local t = ((game:GetService("Stats")).Network.ServerStatsItem)["Data Ping"]:GetValue() / 10
+                local x = m / 3.25 + t
+                local J = d.Is_Curved()
+                if K == tostring(O) and u then
+                    local U = tick() - q
+                    if U > .6 then
+                        q = tick()
+                        u = false
+                    end
+                    return
+                end
+                if n == tostring(O) and J then
+                    return
+                end
+                if K == tostring(O) and T <= x then
+                    d.Parry()
+                    Parried = true
+                end
+                local G = tick()
+                while tick() - G < 1 do
+                    if not Parried then
+                        break
+                    end
+                    task.wait()
+                end
+                Parried = false
+            end
+        end)
+    elseif (V)["Auto Parry"] then
+        (V)["Auto Parry"]:Disconnect();
+        (V)["Auto Parry"] = nil
+    end
+end)
+local F = D.Main:AddToggle("AutoSpam", {
+    Title = "Auto Spam",
+    Default = true
+})
+local j = nil
+local UI = nil
+F:OnChanged(function(U)
+    if U then
+        if j then
+            coroutine.resume(j, "stop")
+            j = nil
+        end
+        j = coroutine.create(function(U)
+            while F.Value and U ~= "stop" do
+                local U = false
+                repeat
+                    local L = d.Get_Ball()
+                    if not L or not L:IsDescendantOf(workspace) then
+                        task.wait()
+                        U = true
+                        break
+                    end
+                    local R = L:FindFirstChild("zoomies")
+                    if not R then
+                        task.wait()
+                        U = true
+                        break
+                    end
+                    d.Closest_Player()
+                    UI = Closest_Entity
+                    if not UI or not UI.PrimaryPart or not UI:IsDescendantOf(workspace) then
+                        task.wait()
+                        U = true
+                        break
+                    end
+                    local P = O:DistanceFromCharacter(L.Position)
+                    local K = UI.PrimaryPart.Position
+                    local n = O:DistanceFromCharacter(K)
+                    if not UI.Parent then
+                        task.wait()
+                        U = true
+                        break
+                    end
+                    if not L:IsDescendantOf(workspace) or L.Position.Magnitude < 1 then
+                        local R = 0
+                        repeat
+                            task.wait(.1)
+                            R = R + .1
+                            L = d.Get_Ball()
+                        until L and (L:IsDescendantOf(workspace) and L.Position.Magnitude > 1) or R >= 2.5
+                        U = true
+                        break
+                    end
+                    local E = L.Velocity.Magnitude
+                    local Y = math.max(E, 0)
+                    local T = ((game:GetService("Stats")).Network.ServerStatsItem)["Data Ping"]:GetValue()
+                    local m = math.clamp(T / 10, 10, 16)
+                    local t = d:Get_Ball_Properties()
+                    local u = d:Get_Entity_Properties()
+                    local q = d.Spam_Service({
+                        Ball_Properties = t,
+                        Entity_Properties = u,
+                        Ping = m,
+                        Spam_Sensitivity = d.Spam_Sensitivity;
+                        Ping_Based_Spam = d.Ping_Based_Spam
+                    })
+                    if R and (R.Parent == L and ((P <= 30 or n <= 30) and r > 1)) then
+                        d.Parry()
+                    end
+                    task.wait()
+                    U = true
+                until true
+                if not U then
+                    break
+                end
+            end
+        end)
+        coroutine.resume(j)
+    elseif j then
+        coroutine.resume(j, "stop")
+        j = nil
+    end
+end)
+local LI = D.Main:AddToggle("MyToggle", {
+    Title = "Manual Spam";
+    Description = "",
+    Default = false,
+    Callback = function()
+        ManualSpam()
+    end
+})
