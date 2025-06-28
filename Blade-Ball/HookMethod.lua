@@ -788,25 +788,21 @@ local function getClosestDangerBall(char)
                 end
             end
         end
-    end
-    return dangerBall
-end
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local BallsFolder = Workspace:WaitForChild("Balls", 9e9)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
+local AbilityButtonPress = Remotes:WaitForChild("AbilityButtonPress")
+local ParryButtonPress = Remotes:WaitForChild("ParryButtonPress")
 
-local connection
-local function startAutoParry()
-    if connection then connection:Disconnect() end
-    connection = RunService.Heartbeat:Connect(function()
-        if not AutoParry then return end
-        local char = getChar()
-        if not (char and char.PrimaryPart and char:FindFirstChild("Highlight")) then return end
-        local ball = getClosestDangerBall(char)
-        if ball then
-            local delay = getPing() + PingOffset
-            task.wait(delay)
-            doRageParry(char)
-        end
-    end)
-end
+-- Konfigurasi
+getgenv().Vampire = {
+    AutoParry = true,
+    PingBased = true,
+    PingBasedOffset = 0.05,
+    BallSpeedCheck = true,
+    ParryRangeMultiplier = 2,
+        }
 
 if AutoParry then startAutoParry() end
 local F = D.Main:AddToggle("AutoSpam", {
