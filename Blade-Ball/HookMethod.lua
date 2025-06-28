@@ -795,16 +795,80 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
 local AbilityButtonPress = Remotes:WaitForChild("AbilityButtonPress")
 local ParryButtonPress = Remotes:WaitForChild("ParryButtonPress")
 
--- Konfigurasi
-getgenv().Vampire = {
-    AutoParry = true,
-    PingBased = true,
-    PingBasedOffset = 0.05,
-    BallSpeedCheck = true,
-    ParryRangeMultiplier = 2,
-        }
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
 
-if AutoParry then startAutoParry() end
+local oldNamecall = mt.__namecall
+mt.__namecall = newcclosure(function(self, ...)
+    local args = {...}
+    if getnamecallmethod() == "FireServer" and tostring(self):lower():find("parry") and args[1] == "Curve" then
+        return
+    end
+    return oldNamecall(self, ...)
+end)
+
+p:OnChanged(function(U)
+    if U then
+        (V)["Auto Parry"] = L.PreSimulation:Connect(function()
+            local U = d.Get_Ball()
+            local L = d.Get_Balls()
+            if not L or #L == 0 then return end
+
+            for L, R in pairs(L) do
+                if not R then return end
+                local P = R:FindFirstChild("zoomies")
+                if not P then return end
+
+                (R:GetAttributeChangedSignal("target")):Once(function()
+                    Parried = false
+                end)
+
+                if Parried then return end
+
+                local K = R:GetAttribute("target")
+                local n = U and U:GetAttribute("target")
+                local E = P.VectorVelocity
+                local Y = O.Character
+                if not Y or not Y.PrimaryPart then return end
+
+                local T = (Y.PrimaryPart.Position - R.Position).Magnitude
+                local m = E.Magnitude
+                local t = (game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) / 10
+                local x = m / 3.25 + t
+                local J = d.Is_Curved()
+
+                if K == tostring(O) and u then
+                    local U = tick() - q
+                    if U > 0.6 then
+                        q = tick()
+                        u = false
+                    end
+                    return
+                end
+
+                if n == tostring(O) and J then
+                    return
+                end
+
+                if K == tostring(O) and T <= x then
+                    d.Parry()
+                    Parried = true
+                end
+
+                local G = tick()
+                while tick() - G < 1 do
+                    if not Parried then break end
+                    task.wait()
+                end
+
+                Parried = false
+            end
+        end)
+    elseif (V)["Auto Parry"] then
+        (V)["Auto Parry"]:Disconnect()
+        (V)["Auto Parry"] = nil
+    end
+end)
 local F = D.Main:AddToggle("AutoSpam", {
     Title = "Auto Spam",
     Default = true
