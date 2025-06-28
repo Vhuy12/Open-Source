@@ -1,4 +1,5 @@
---https://vyn.wtf
+local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/Vhuy12/VAMPIRE-HUB/refs/heads/main/Evil.lua"))()
+
 repeat
     task.wait()
 until game:IsLoaded()
