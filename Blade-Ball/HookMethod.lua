@@ -710,6 +710,8 @@ local p = D.Main:AddToggle("AutoParry", {
     Title = "Auto parry";
     Default = true
 })
+local Parried = false
+
 p:OnChanged(function(U)
     if U then
         V["Auto Parry"] = L.PreSimulation:Connect(function()
@@ -767,7 +769,7 @@ p:OnChanged(function(U)
         V["Auto Parry"]:Disconnect()
         V["Auto Parry"] = nil
     end
-end))
+end)
 local F = D.Main:AddToggle("AutoSpam", {
     Title = "Auto Spam",
     Default = true
