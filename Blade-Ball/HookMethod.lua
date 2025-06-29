@@ -666,8 +666,6 @@ function ManualSpam()
     end)
 end
 ManualSpam()
-local Z = (loadstring(game:HttpGet("https://raw.githubusercontent.com/CodeE4X-dev/Library/refs/heads/main/FluentRemake.lua")))()
-local k = (loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua")))()
 local C = (loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua")))()
 local i = Z:CreateWindow({
     Title = "Vampire test version",
