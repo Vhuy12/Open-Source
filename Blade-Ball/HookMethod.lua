@@ -665,9 +665,9 @@ function ManualSpam()
         end
     end)
 end
-ManualSpam()
+
 local Z = (loadstring(game:HttpGet("https://raw.githubusercontent.com/CodeE4X-dev/Library/refs/heads/main/FluentRemake.lua")))()
-local C = (loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua")))()
+
 local i = Z:CreateWindow({
     Title = "Vampire test version",
     SubTitle = "by Kurayami";
@@ -874,38 +874,3 @@ F:OnChanged(function(U)
         j = nil
     end
 end)
-
-local lastManualParry = 0
-local manualParryDelay = 0.5
-local manualSpamThread = nil
-
-local LI = D.Main:AddToggle("ManualSpam", {
-    Title = "Manual Spam",
-    Default = false,
-    Callback = function(state)
-        if state then
-            if manualSpamThread then
-                coroutine.close(manualSpamThread)
-                manualSpamThread = nil
-            end
-
-            manualSpamThread = coroutine.create(function()
-                while LI.Value do
-                    local currentTime = tick()
-                    if currentTime - lastManualParry >= manualParryDelay then
-                        lastManualParry = currentTime
-                        d.Parry()
-                    end
-                    task.wait(0.05)
-                end
-            end)
-
-            coroutine.resume(manualSpamThread)
-        else
-            if manualSpamThread then
-                coroutine.close(manualSpamThread)
-                manualSpamThread = nil
-            end
-        end
-    end
-})
