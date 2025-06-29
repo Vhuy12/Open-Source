@@ -711,35 +711,66 @@ local p = D.Main:AddToggle("AutoParry", {
     Default = true
 })
 
-p:OnChanged(function(state)
-    if state then
+local Parried = false
+
+p:OnChanged(function(U)
+    if U then
         V["Auto Parry"] = L.PreSimulation:Connect(function()
-            local ball = d.Get_Ball()
-            if not ball then return end
+            local Ball = d.Get_Ball()
+            local AllBalls = d.Get_Balls()
+            if not AllBalls or #AllBalls == 0 then return end
 
-            local zoom = ball:FindFirstChild("zoomies")
-            if not zoom then return end
+            for _, R in pairs(AllBalls) do
+                if not R then return end
+                local zoom = R:FindFirstChild("zoomies")
+                if not zoom then return end
 
-            local target = ball:GetAttribute("target")
-            if target ~= tostring(O) then return end
+                R:GetAttributeChangedSignal("target"):Once(function()
+                    Parried = false
+                end)
 
-            local char = O.Character
-            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                if Parried then return end
 
-            local distance = (char.HumanoidRootPart.Position - ball.Position).Magnitude
-            local velocity = zoom.VectorVelocity.Magnitude
-            local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue() / 10
-            local threshold = velocity / 3.25 + ping
+                local target = R:GetAttribute("target")
+                local mainBallTarget = Ball and Ball:GetAttribute("target")
+                local velocity = zoom.VectorVelocity
+                local character = O.Character
+                if not character or not character.PrimaryPart then return end
 
-            if distance <= threshold then
-                d.Parry()
+                local distance = (character.PrimaryPart.Position - R.Position).Magnitude
+                local speed = velocity.Magnitude
+                local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue() / 10
+                local threshold = speed / 3.25 + ping
+                local curved = d.Is_Curved()
+
+                if target == tostring(O) and u then
+                    local dt = tick() - q
+                    if dt > 0.6 then
+                        q = tick()
+                        u = false
+                    end
+                    return
+                end
+
+                if mainBallTarget == tostring(O) and curved then
+                    return
+                end
+
+                if target == tostring(O) and distance <= threshold then
+                    d.Parry()
+                    Parried = true
+                end
+
+                task.delay(1, function()
+                    Parried = false
+                end)
             end
         end)
     elseif V["Auto Parry"] then
         V["Auto Parry"]:Disconnect()
         V["Auto Parry"] = nil
     end
-end)
+end))
 local F = D.Main:AddToggle("AutoSpam", {
     Title = "Auto Spam",
     Default = true
