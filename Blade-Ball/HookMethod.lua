@@ -709,6 +709,8 @@ local p = D.Main:AddToggle("AutoParry", {
     Default = true
 })
 local Parried = false
+local lastParryTime = 0
+local parryCooldown = 0.8
 
 p:OnChanged(function(U)
     if U then
@@ -726,41 +728,23 @@ p:OnChanged(function(U)
                     Parried = false
                 end)
 
-                if Parried then return end
+                if Parried or (tick() - lastParryTime < parryCooldown) then return end
 
                 local target = R:GetAttribute("target")
-                local mainBallTarget = Ball and Ball:GetAttribute("target")
-                local velocity = zoom.VectorVelocity
                 local character = O.Character
                 if not character or not character.PrimaryPart then return end
 
                 local distance = (character.PrimaryPart.Position - R.Position).Magnitude
+                local velocity = zoom.VectorVelocity
                 local speed = velocity.Magnitude
                 local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue() / 10
                 local threshold = speed / 3.25 + ping
-                local curved = d.Is_Curved()
-
-                if target == tostring(O) and u then
-                    local dt = tick() - q
-                    if dt > 0.6 then
-                        q = tick()
-                        u = false
-                    end
-                    return
-                end
-
-                if mainBallTarget == tostring(O) and curved then
-                    return
-                end
 
                 if target == tostring(O) and distance <= threshold then
                     d.Parry()
                     Parried = true
+                    lastParryTime = tick()
                 end
-
-                task.delay(1, function()
-                    Parried = false
-                end)
             end
         end)
     elseif V["Auto Parry"] then
