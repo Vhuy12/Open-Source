@@ -705,53 +705,81 @@ D.Home:AddButton({
         })
     end
 })
-
-local p = D.Main:AddToggle("AutoParry", {
-    Title = "Auto parry";
-    Default = true
+local AutoParryConfig = {
+    Enabled = false,
+    PingBased = true,
+    PingOffset = 0.05,
+    BallSpeedCheck = true,
+    RangeMultiplier = 2,
+}
+local autoParryToggle = D.Main:AddToggle("AutoParry", {
+    Title = "Auto Parry",
+    Default = false
 })
-local Parried = false
-local lastParryTime = 0
-local parryCooldown = 0.1
+local function getRealBall()
+    local BallsFolder = workspace:FindFirstChild("Balls")
+    if not BallsFolder then return nil end
+    for _, ball in ipairs(BallsFolder:GetChildren()) do
+        if ball:GetAttribute("realBall") == true then
+            return ball
+        end
+    end
+    return nil
+end
 
-p:OnChanged(function(U)
-    if U then
-        V["Auto Parry"] = L.PreSimulation:Connect(function()
-            local Ball = d.Get_Ball()
-            local AllBalls = d.Get_Balls()
-            if not AllBalls or #AllBalls == 0 then return end
+local function getPing()
+    local Stats = game:GetService("Stats")
+    local ok, ping = pcall(function()
+        return Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000
+    end)
+    return ok and math.clamp(ping, 0.05, 0.5) or 0.1
+end
 
-            for _, R in pairs(AllBalls) do
-                if not R then return end
-                local zoom = R:FindFirstChild("zoomies")
-                if not zoom then return end
+local function isTarget()
+    local lp = game.Players.LocalPlayer
+    local char = lp and lp.Character
+    return char and char:FindFirstChild("Highlight")
+end
 
-                R:GetAttributeChangedSignal("target"):Once(function()
-                    Parried = false
-                end)
+local function doParry()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local VIM = game:GetService("VirtualInputManager")
+    local ParryRemote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("ParryButtonPress")
+    if ParryRemote then
+        ParryRemote:Fire()
+    end
+    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
 
-                if Parried or (tick() - lastParryTime < parryCooldown) then return end
+local autoParryConnection = nil
 
-                local target = R:GetAttribute("target")
-                local character = O.Character
-                if not character or not character.PrimaryPart then return end
+autoParryToggle:OnChanged(function(state)
+    AutoParryConfig.Enabled = state
+    if autoParryConnection then
+        autoParryConnection:Disconnect()
+        autoParryConnection = nil
+    end
+    if state then
+        autoParryConnection = game:GetService("RunService").PreRender:Connect(function()
+            local lp = game.Players.LocalPlayer
+            local char = lp and lp.Character
+            if not AutoParryConfig.Enabled or not char or not char.PrimaryPart then return end
 
-                local distance = (character.PrimaryPart.Position - R.Position).Magnitude
-                local velocity = zoom.VectorVelocity
-                local speed = velocity.Magnitude
-                local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue() / 10
-                local threshold = speed / 3.25 + ping
+            local ball = getRealBall()
+            if not ball or not ball.Position then return end
 
-                if target == tostring(O) and distance <= threshold then
-                    d.Parry()
-                    Parried = true
-                    lastParryTime = tick()
-                end
+            local velocity = ball.AssemblyLinearVelocity.Magnitude
+            local dist = (ball.Position - char.PrimaryPart.Position).Magnitude
+            local ping = AutoParryConfig.PingBased and getPing() or 0
+            local pingThreshold = math.clamp(ping / 10, 10, 20)
+            local parryRange = (pingThreshold + AutoParryConfig.PingOffset) + (velocity / math.pi) * AutoParryConfig.RangeMultiplier
+
+            if AutoParryConfig.BallSpeedCheck and velocity < 5 then return end
+            if dist <= parryRange and isTarget() then
+                doParry()
             end
         end)
-    elseif V["Auto Parry"] then
-        V["Auto Parry"]:Disconnect()
-        V["Auto Parry"] = nil
     end
 end)
 
