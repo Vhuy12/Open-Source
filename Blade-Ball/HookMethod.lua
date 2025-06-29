@@ -710,9 +710,6 @@ local p = D.Main:AddToggle("AutoParry", {
     Title = "Auto parry";
     Default = true
 })
-
-local Parried = false
-
 p:OnChanged(function(U)
     if U then
         V["Auto Parry"] = L.PreSimulation:Connect(function()
