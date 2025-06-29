@@ -709,6 +709,7 @@ local p = D.Main:AddToggle("AutoParry", {
     Title = "Auto parry";
     Default = true
 })
+
 local Parried = false
 local lastParryTime = 0
 local parryCooldown = 0.1
@@ -753,6 +754,7 @@ p:OnChanged(function(U)
         V["Auto Parry"] = nil
     end
 end)
+
 local F = D.Main:AddToggle("AutoSpam", {
     Title = "Auto Spam",
     Default = true
@@ -836,11 +838,31 @@ F:OnChanged(function(U)
         j = nil
     end
 end)
-local LI = D.Main:AddToggle("MyToggle", {
-    Title = "Manual Spam";
-    Description = "",
+
+local manualSpamThread = nil
+local LI = D.Main:AddToggle("ManualSpam", {
+    Title = "Manual Spam",
     Default = false,
-    Callback = function()
-        ManualSpam()
+    Callback = function(state)
+        if state then
+            if manualSpamThread then
+                coroutine.close(manualSpamThread)
+                manualSpamThread = nil
+            end
+
+            manualSpamThread = coroutine.create(function()
+                while LI.Value do
+                    d.Parry()
+                    task.wait(0.2)
+                end
+            end)
+
+            coroutine.resume(manualSpamThread)
+        else
+            if manualSpamThread then
+                coroutine.close(manualSpamThread)
+                manualSpamThread = nil
+            end
+        end
     end
 })
