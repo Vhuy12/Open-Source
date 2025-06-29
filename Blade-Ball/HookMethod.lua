@@ -759,6 +759,7 @@ local F = D.Main:AddToggle("AutoSpam", {
     Title = "Auto Spam",
     Default = true
 })
+
 local j = nil
 local UI = nil
 F:OnChanged(function(U)
@@ -839,7 +840,10 @@ F:OnChanged(function(U)
     end
 end)
 
+local lastManualParry = 0
+local manualParryDelay = 0.2
 local manualSpamThread = nil
+
 local LI = D.Main:AddToggle("ManualSpam", {
     Title = "Manual Spam",
     Default = false,
@@ -852,8 +856,12 @@ local LI = D.Main:AddToggle("ManualSpam", {
 
             manualSpamThread = coroutine.create(function()
                 while LI.Value do
-                    d.Parry()
-                    task.wait(0.2)
+                    local currentTime = tick()
+                    if currentTime - lastManualParry >= manualParryDelay then
+                        lastManualParry = currentTime
+                        d.Parry()
+                    end
+                    task.wait(0.05)
                 end
             end)
 
