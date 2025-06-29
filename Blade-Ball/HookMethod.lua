@@ -706,84 +706,86 @@ D.Home:AddButton({
     end
 })
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
-local LocalPlayer = Players.LocalPlayer
-local BallsFolder = workspace:WaitForChild("Balls")
-local ParryButtonPress = ReplicatedStorage.Remotes:FindFirstChild("ParryButtonPress")
-
-local Config = {
+local AutoParryConfig = {
     Enabled = false,
-    Spam = false,
-    Delay = 0.2,
-    Range = 30
+    PingBased = true,
+    PingOffset = 0.05,
+    BallSpeedCheck = true,
+    RangeMultiplier = 2,
 }
 
-local function doParry()
-    if ParryButtonPress and ParryButtonPress:IsA("RemoteEvent") then
-        ParryButtonPress:FireServer()
-    end
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-    task.wait(0.03)
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-end
+local autoParryToggle = D.Main:AddToggle("AutoParry", {
+    Title = "Auto Parry",
+    Default = false
+})
 
 local function getRealBall()
+    local BallsFolder = workspace:FindFirstChild("Balls")
+    if not BallsFolder then return nil end
     for _, ball in ipairs(BallsFolder:GetChildren()) do
-        if ball:GetAttribute("realBall") then
+        if ball:GetAttribute("realBall") == true then
             return ball
         end
     end
     return nil
 end
 
-local conn
-local function start()
-    if conn then conn:Disconnect() end
-    conn = RunService.RenderStepped:Connect(function()
-        if not Config.Enabled then return end
-        local char = LocalPlayer.Character
-        if not char or not char.PrimaryPart then return end
-        local ball = getRealBall()
-        if ball then
-            local dist = (ball.Position - char.PrimaryPart.Position).Magnitude
-            if dist < Config.Range then
-                doParry()
-                if not Config.Spam then
-                    task.wait(Config.Delay)
-                end
-            end
-        end
-        if Config.Spam then
-            doParry()
-            task.wait(Config.Delay)
-        end
+local function getPing()
+    local Stats = game:GetService("Stats")
+    local ok, ping = pcall(function()
+        return Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000
     end)
+    return ok and math.clamp(ping, 0.05, 0.5) or 0.1
 end
 
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-local ParryBtn = Instance.new("TextButton", ScreenGui)
-ParryBtn.Size = UDim2.new(0,120,0,40)
-ParryBtn.Position = UDim2.new(0,100,0,100)
-ParryBtn.Text = "AutoParry: OFF"
-ParryBtn.MouseButton1Click:Connect(function()
-    Config.Enabled = not Config.Enabled
-    ParryBtn.Text = "AutoParry: " .. (Config.Enabled and "ON" or "OFF")
-    if Config.Enabled then start() end
-    if not Config.Enabled and conn then conn:Disconnect() end
+local function isTarget()
+    local lp = game.Players.LocalPlayer
+    local char = lp and lp.Character
+    return char and char:FindFirstChild("Highlight")
+end
+
+local function doParry()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local VIM = game:GetService("VirtualInputManager")
+    local ParryRemote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("ParryButtonPress")
+    if ParryRemote then
+        ParryRemote:Fire()
+    end
+    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
+
+local autoParryConnection = nil
+
+autoParryToggle:OnChanged(function(state)
+    AutoParryConfig.Enabled = state
+    if autoParryConnection then
+        autoParryConnection:Disconnect()
+        autoParryConnection = nil
+    end
+    if state then
+        autoParryConnection = game:GetService("RunService").PreRender:Connect(function()
+            local lp = game.Players.LocalPlayer
+            local char = lp and lp.Character
+            if not AutoParryConfig.Enabled or not char or not char.PrimaryPart then return end
+
+            local ball = getRealBall()
+            if not ball or not ball.Position then return end
+
+            local velocity = ball.AssemblyLinearVelocity.Magnitude
+            local dist = (ball.Position - char.PrimaryPart.Position).Magnitude
+            local ping = AutoParryConfig.PingBased and getPing() or 0
+            local pingThreshold = math.clamp(ping / 10, 10, 20)
+            local parryRange = (pingThreshold + AutoParryConfig.PingOffset) + (velocity / math.pi) * AutoParryConfig.RangeMultiplier
+
+            if AutoParryConfig.BallSpeedCheck and velocity < 5 then return end
+            if dist <= parryRange and isTarget() then
+                doParry()
+            end
+        end)
+    end
 end)
 
-local SpamBtn = Instance.new("TextButton", ScreenGui)
-SpamBtn.Size = UDim2.new(0,120,0,40)
-SpamBtn.Position = UDim2.new(0,100,0,150)
-SpamBtn.Text = "AutoSpam: OFF"
-SpamBtn.MouseButton1Click:Connect(function()
-    Config.Spam = not Config.Spam
-    SpamBtn.Text = "AutoSpam: " .. (Config.Spam and "ON" or "OFF")
-end)
 local lastManualParry = 0
 local manualParryDelay = 0.5
 local manualSpamThread = nil
