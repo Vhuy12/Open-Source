@@ -711,7 +711,7 @@ local AutoParryConfig = {
     PingBased = true,
     PingOffset = 0.05,
     BallSpeedCheck = true,
-    RangeMultiplier = 2,
+    RangeMultiplier = 1,
 }
 
 local autoParryToggle = D.Main:AddToggle("AutoParry", {
