@@ -667,7 +667,6 @@ function ManualSpam()
 end
 ManualSpam()
 local Z = (loadstring(game:HttpGet("https://raw.githubusercontent.com/CodeE4X-dev/Library/refs/heads/main/FluentRemake.lua")))()
-local k = (loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua")))()
 local C = (loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua")))()
 local i = Z:CreateWindow({
     Title = "Vampire test version",
@@ -712,7 +711,7 @@ local p = D.Main:AddToggle("AutoParry", {
 })
 local Parried = false
 local lastParryTime = 0
-local parryCooldown = 0.5
+local parryCooldown = 0.2
 
 p:OnChanged(function(U)
     if U then
