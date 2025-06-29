@@ -705,20 +705,39 @@ D.Home:AddButton({
         })
     end
 })
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Stats = game:GetService("Stats")
+
+local LocalPlayer = Players.LocalPlayer
+local BallsFolder = workspace:WaitForChild("Balls")
+local ParryButtonPress = ReplicatedStorage.Remotes:WaitForChild("ParryButtonPress")
+
 local AutoParryConfig = {
     Enabled = false,
+    SpamEnabled = false,
     PingBased = true,
     PingOffset = 0.05,
     BallSpeedCheck = true,
     RangeMultiplier = 2,
+    SpamDelay = 0.12
 }
+
 local autoParryToggle = D.Main:AddToggle("AutoParry", {
-    Title = "Auto Parry",
+    Title = "Auto Parry (Mobile & PC Friendly)",
     Default = false
 })
+
+local autoSpamToggle = D.Main:AddToggle("AutoSpam", {
+    Title = "Auto Spam Parry (Mobile & PC Friendly)",
+    Default = false
+})
+
 local function getRealBall()
-    local BallsFolder = workspace:FindFirstChild("Balls")
-    if not BallsFolder then return nil end
     for _, ball in ipairs(BallsFolder:GetChildren()) do
         if ball:GetAttribute("realBall") == true then
             return ball
@@ -728,7 +747,6 @@ local function getRealBall()
 end
 
 local function getPing()
-    local Stats = game:GetService("Stats")
     local ok, ping = pcall(function()
         return Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000
     end)
@@ -736,45 +754,38 @@ local function getPing()
 end
 
 local function isTarget()
-    local lp = game.Players.LocalPlayer
-    local char = lp and lp.Character
+    local char = LocalPlayer.Character
     return char and char:FindFirstChild("Highlight")
 end
 
 local function doParry()
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local VIM = game:GetService("VirtualInputManager")
-    local ParryRemote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("ParryButtonPress")
-    if ParryRemote then
-        ParryRemote:Fire()
+    if ParryButtonPress then
+        ParryButtonPress:Fire()
     end
-    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+    if not UserInputService.TouchEnabled then
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+    end
 end
 
-local autoParryConnection = nil
-
+local autoParryConn
 autoParryToggle:OnChanged(function(state)
     AutoParryConfig.Enabled = state
-    if autoParryConnection then
-        autoParryConnection:Disconnect()
-        autoParryConnection = nil
+    if autoParryConn then
+        autoParryConn:Disconnect()
+        autoParryConn = nil
     end
     if state then
-        autoParryConnection = game:GetService("RunService").PreRender:Connect(function()
-            local lp = game.Players.LocalPlayer
-            local char = lp and lp.Character
+        autoParryConn = RunService.PreRender:Connect(function()
+            local char = LocalPlayer.Character
             if not AutoParryConfig.Enabled or not char or not char.PrimaryPart then return end
-
             local ball = getRealBall()
             if not ball or not ball.Position then return end
-
             local velocity = ball.AssemblyLinearVelocity.Magnitude
             local dist = (ball.Position - char.PrimaryPart.Position).Magnitude
             local ping = AutoParryConfig.PingBased and getPing() or 0
             local pingThreshold = math.clamp(ping / 10, 10, 20)
             local parryRange = (pingThreshold + AutoParryConfig.PingOffset) + (velocity / math.pi) * AutoParryConfig.RangeMultiplier
-
             if AutoParryConfig.BallSpeedCheck and velocity < 5 then return end
             if dist <= parryRange and isTarget() then
                 doParry()
@@ -783,30 +794,27 @@ autoParryToggle:OnChanged(function(state)
     end
 end)
 
-local F = D.Main:AddToggle("AutoSpam", {
-    Title = "Auto Spam",
-    Default = true
-})
-local j = nil
-local UI = nil
-F:OnChanged(function(U)
-    if U then
-        if j then
-            coroutine.resume(j, "stop")
-            j = nil
-        end
-        j = coroutine.create(function(U)
-            while F.Value and U ~= "stop" do
-                -- ... (giữ nguyên logic auto spam gốc của bạn)
-                task.wait()
+local autoSpamConn
+autoSpamToggle:OnChanged(function(state)
+    AutoParryConfig.SpamEnabled = state
+    if autoSpamConn then
+        autoSpamConn:Disconnect()
+        autoSpamConn = nil
+    end
+    if state then
+        autoSpamConn = RunService.RenderStepped:Connect(function()
+            if not AutoParryConfig.SpamEnabled then return end
+            if not autoSpamConn._next or tick() > autoSpamConn._next then
+                doParry()
+                autoSpamConn._next = tick() + AutoParryConfig.SpamDelay
             end
         end)
-        coroutine.resume(j)
-    elseif j then
-        coroutine.resume(j, "stop")
-        j = nil
     end
 end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+end)
+
 local lastManualParry = 0
 local manualParryDelay = 0.5
 local manualSpamThread = nil
