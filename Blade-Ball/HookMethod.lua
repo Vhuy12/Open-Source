@@ -712,7 +712,7 @@ local p = D.Main:AddToggle("AutoParry", {
 })
 local Parried = false
 local lastParryTime = 0
-local parryCooldown = 0.8
+local parryCooldown = 0.5
 
 p:OnChanged(function(U)
     if U then
